@@ -1,0 +1,6 @@
+.git
+.astro
+.vscode
+dist
+drizzle
+node_modules
