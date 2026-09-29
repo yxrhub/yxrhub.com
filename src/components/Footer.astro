@@ -1,9 +1,33 @@
-<div class="footer" style="; padding-bottom: 32px;">
-    © 2025-2026 <a href="https://yxrhub.com" target="_blank">YxrHub</a>. Powered by <a href="https://astro.build" target="_blank">Astro</a>. Designed for the <a href="https://github.com/yxrhub/yxrspace">YxrSpace</a> Universe.
-</div>
+<footer class="site-footer">
+    <div class="wrap footer-inner">
+        © 2025-2026 <a href="https://yxrhub.com" target="_blank" rel="noopener">YxrHub</a>. Powered by <a
+            href="https://astro.build" target="_blank" rel="noopener">Astro</a>. Designed for the <a
+            href="https://github.com/yxrhub/yxrspace" target="_blank" rel="noopener">YxrSpace</a> Universe.
+    </div>
+</footer>
 
 <style>
-    .footer a {
-        font-weight: bold;
+    .site-footer {
+        margin-top: 72px;
+        border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+        padding: 26px 20px 40px;
+        font-size: 13px;
+        line-height: 1.9;
+        color: var(--text-3);
+        text-align: center;
+    }
+
+    .footer-inner a {
+        color: var(--text-2);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+
+    .footer-inner a:hover {
+        color: var(--accent);
     }
 </style>

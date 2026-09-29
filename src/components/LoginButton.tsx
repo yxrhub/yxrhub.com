@@ -1,5 +1,41 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { authClient } from "../lib/auth-client";
+
+const pill: CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--surface)',
+    border: '1px solid var(--border-strong)',
+    borderRadius: 999,
+    padding: '6px 14px',
+    fontSize: 13,
+    fontFamily: 'inherit',
+    lineHeight: 1.6,
+    color: 'var(--text)',
+    cursor: 'pointer',
+    transition: 'border-color .15s ease, background .15s ease',
+};
+
+const identity: CSSProperties = {
+    ...pill,
+    cursor: 'default',
+    paddingLeft: 6,
+};
+
+const ghost: CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    padding: '6px 2px',
+    fontFamily: 'inherit',
+    fontSize: 13,
+    lineHeight: 1.6,
+    color: 'var(--text-3)',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    textUnderlineOffset: 3,
+};
 
 export default function () {
     const [loading, setLoading] = useState(true)
@@ -35,27 +71,25 @@ export default function () {
     }
 
     // 加载中显示文字防止闪烁
-    if (loading) return <span>加载中...</span>
-
-    const btn = {
-        background: 'transparent',
-        border: 'none',
-        color: '#0066cc',
-        textDecoration: 'underline',
-        cursor: 'pointer',
-        padding: 0,
-        fontSize: 'inherit'
-    }
+    if (loading) return <span style={{ fontSize: 13, color: 'var(--text-3)' }}>加载中...</span>
 
     return isLogin ? (
-        <>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                {image && <img width={32} src={image} alt='user avatar' />}
-                <span style={{ marginLeft: 8 }}>{name}</span>
-            </div>
-            <button onClick={logout} style={btn}>注销登录</button>
-        </>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={identity}>
+                {image && (
+                    <img
+                        width={22}
+                        height={22}
+                        src={image}
+                        alt="user avatar"
+                        style={{ borderRadius: '50%', display: 'block' }}
+                    />
+                )}
+                <span>{name}</span>
+            </span>
+            <button onClick={logout} style={ghost}>注销登录</button>
+        </div>
     ) : (
-        <button onClick={github} style={btn}>使用 GitHub 登录</button>
+        <button onClick={github} style={pill}>使用 GitHub 登录</button>
     )
 }

@@ -176,8 +176,19 @@ graph TB
 
 **关键实现与约束**：
 
-- **内容与视图分离**：首页正文全部写在 `src/content/index.md`，由 `Welcome.astro` 通过 `import * as index from "../content/index.md"` + `await index.compiledContent()` 在服务端编译为 HTML。**改文案 = 改 Markdown，不要动组件。**
+- **内容与视图分离**：首页内容全部来自 `src/content/index.md`，由 `Welcome.astro` 通过 `import * as doc from "../content/index.md"` 读入，`await doc.compiledContent()` 在服务端编译为 HTML。**改文案 = 改 Markdown，不要动组件。**
+- **内容契约（frontmatter）**：首页采用「散文 + 结构化数据」混合模式。散文（标题、简介、ID 故事、英文自述）留在 Markdown 正文中；两处清单以 frontmatter 数据承载，由组件渲染为卡片与网格：
+
+  | frontmatter 字段 | 渲染为 |
+  | --- | --- |
+  | `projects.title` / `.intro` / `.items[]` | 项目卡片区（`#projects`），每项含 `name` `emoji` `url` `positioning` `status`，可选 `siteLabel` `siteText` `siteUrl` |
+  | `links.title` / `.intro` / `.items[]` | 平台链接网格（`#find-me`），每项含 `name` `text` `url`，可选 `note` |
+  | `updated` | 页脚更新时间 |
+
+  **修改这两处内容时改 frontmatter，不要改 `Welcome.astro`。** 新增字段需同步更新 `Welcome.astro` 顶部的 `DocFrontmatter` 接口。
 - **岛屿水合边界**：只有 `LoginButton.tsx` 是客户端组件，且使用 `client:idle`（浏览器空闲后再水合），保证首屏不被 JS 阻塞。Header 中的写法为 `<LoginButton client:idle />`。
+- **样式作用域**：`Welcome.astro` 通过 `set:html` 注入 Markdown 编译结果，因此针对正文元素的样式必须用 `:global()`（编译为 `.prose[data-astro-cid-*] ul` 形式）。**普通 scoped 选择器无法命中注入内容。**
+- **设计令牌集中点**：全站配色、字体栈、内容宽度、圆角与阴影统一在 `Layout.astro` 的 `<style is:global>` 中定义为 CSS 变量，并按 `prefers-color-scheme` 提供深色模式覆盖。**组件内不要硬编码颜色值，一律引用变量。**
 - **埋点仅生产环境**：`Layout.astro` 中通过 `import.meta.env.PROD && <GoogleTag/>` 条件渲染，避免开发环境污染统计数据。
 - **静态资源两类**：需要构建优化（哈希、压缩）放 `src/assets/` 并用 `import` 引用；需要原样对外（favicon、robots.txt）放 `public/`。
 
@@ -401,6 +412,8 @@ graph LR
 | ADR-06 | 中间件预渲染短路 | 规避 headers 警告与无意义查询 | 构建告警、性能损耗 |
 | ADR-07 | 文案存 Markdown，不进组件 | 内容/视图分离，便于非技术编辑 | 文案散落、维护困难 |
 | ADR-08 | 表结构由 better-auth 契约决定 | 保证认证链路稳定 | 登录直接失效 |
+| ADR-09 | 首页采用「Markdown 散文 + frontmatter 结构化数据」混合模式 | 散文保持可读可编辑,清单获得类型化结构以渲染卡片;避免用 `:has()` 从渲染后的 HTML 反推结构 | 内容契约与 `DocFrontmatter` 接口需同步,否则渲染缺字段 |
+| ADR-10 | 全站配色走 CSS 变量 + `prefers-color-scheme`,不引入 CSS 框架 | 零新增依赖、体积可控、深色模式一处生效 | 组件内硬编码颜色会导致深色模式失效 |
 
 ---
 

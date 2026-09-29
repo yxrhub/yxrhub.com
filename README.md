@@ -57,8 +57,9 @@ pnpm dev          # http://localhost:4321
 | `pnpm dev` | 启动开发服务器 |
 | `pnpm build` | 生产构建,产出 `dist/` |
 | `pnpm preview` | 预览构建产物 |
-| `pnpm astro check` | 类型与语法检查 |
 | `pnpm drizzle-kit generate` | 由 schema 生成迁移 |
+
+> 类型检查需先安装 `pnpm add -D @astrojs/check typescript`,之后可使用 `pnpm astro check`。
 
 ---
 

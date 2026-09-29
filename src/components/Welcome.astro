@@ -1,62 +1,389 @@
 ---
-import * as index from "../content/index.md";
+import * as doc from "../content/index.md";
 
-const compiled = await index.compiledContent();
+interface Project {
+	name: string;
+	emoji: string;
+	url: string;
+	positioning: string;
+	status: string;
+	siteLabel?: string;
+	siteText?: string;
+	siteUrl?: string;
+}
+
+interface SiteLink {
+	name: string;
+	note?: string;
+	text: string;
+	url: string;
+}
+
+interface DocFrontmatter {
+	projects: { title: string; intro: string; items: Project[] };
+	links: { title: string; intro: string; items: SiteLink[] };
+	updated: string;
+}
+
+const fm = doc.frontmatter as unknown as DocFrontmatter;
+const body = await doc.compiledContent();
 ---
 
-<Fragment set:html={compiled} />
+<article id="about" class="doc">
+	<div class="prose" set:html={body} />
+</article>
+
+<section id="projects" class="section">
+	<h2 class="section-title">{fm.projects.title}</h2>
+	<p class="section-intro">{fm.projects.intro}</p>
+
+	<div class="cards">
+		{fm.projects.items.map((project) => (
+			<article class="card">
+				<div class="card-head">
+					<span class="card-emoji" aria-hidden="true">{project.emoji}</span>
+					<h3 class="card-title">
+						<a href={project.url} target="_blank" rel="noopener">{project.name}</a>
+					</h3>
+				</div>
+				<dl class="meta">
+					<div class="meta-row">
+						<dt>定位</dt>
+						<dd>{project.positioning}</dd>
+					</div>
+					<div class="meta-row">
+						<dt>状态</dt>
+						<dd>{project.status}</dd>
+					</div>
+					{project.siteUrl && (
+						<div class="meta-row">
+							<dt>{project.siteLabel}</dt>
+							<dd>
+								<a href={project.siteUrl} target="_blank" rel="noopener">{project.siteText}</a>
+							</dd>
+						</div>
+					)}
+				</dl>
+			</article>
+		))}
+	</div>
+</section>
+
+<section id="find-me" class="section">
+	<h2 class="section-title">{fm.links.title}</h2>
+	<p class="section-intro" set:html={fm.links.intro} />
+
+	<div class="links">
+		{fm.links.items.map((link) => (
+			<a class="link-card" href={link.url} target="_blank" rel="noopener">
+				<span class="link-name">{link.name}</span>
+				{link.note ? <span class="link-desc">{link.note}</span> : null}
+				<span class={link.note ? "link-handle" : "link-text"} title={link.text}>{link.text}</span>
+			</a>
+		))}
+	</div>
+</section>
+
+<p class="updated">{fm.updated}</p>
 
 <style>
-	h1 {
-		font-size: 22px;
-		margin-top: 0.25em;
+	/* ── 正文排版 ─────────────────────────────── */
+	.doc {
+		margin-bottom: 4px;
 	}
 
-	pre {
-		font-family:
-			ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono',
-			monospace;
-		font-weight: normal;
-		background: linear-gradient(14deg, #d83333 0%, #f041ff 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		margin: 0;
+	.prose {
+		font-size: 16.5px;
+		line-height: 1.9;
+		color: var(--text-2);
 	}
 
-	h2 {
-		margin: 0 0 1em;
-		font-weight: normal;
-		color: #111827;
+	.prose :global(h1) {
+		font-size: clamp(28px, 5.2vw, 38px);
+		line-height: 1.3;
+		letter-spacing: -0.02em;
+		font-weight: 600;
+		color: var(--text);
+		margin: 0 0 0.7em;
+	}
+
+	.prose :global(h2) {
 		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--text);
+		margin: 2em 0 0.7em;
 	}
 
-	p {
-		color: #4b5563;
-		font-size: 16px;
-		line-height: 24px;
-		letter-spacing: -0.006em;
+	.prose :global(p) {
+		margin: 0 0 1.15em;
+	}
+
+	.prose :global(p:last-child) {
+		margin-bottom: 0;
+	}
+
+	.prose :global(strong) {
+		color: var(--text);
+		font-weight: 600;
+	}
+
+	.prose :global(em) {
+		font-style: italic;
+	}
+
+	.prose :global(a) {
+		color: var(--accent);
+		text-decoration: none;
+		border-bottom: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+		transition: border-color 0.15s ease;
+	}
+
+	.prose :global(a:hover) {
+		border-bottom-color: var(--accent);
+	}
+
+	.prose :global(ul) {
+		list-style: none;
+		margin: 0 0 1.5em;
+		padding: 0;
+		display: grid;
+		gap: 12px;
+	}
+
+	.prose :global(li) {
+		position: relative;
+		padding-left: 20px;
 		margin: 0;
 	}
 
-	code {
-		display: inline-block;
-		background:
-			linear-gradient(66.77deg, #f3cddd 0%, #f5cee7 100%) padding-box,
-			linear-gradient(155deg, #d83333 0%, #f041ff 18%, #f5cee7 45%) border-box;
-		border-radius: 8px;
-		border: 1px solid transparent;
-		padding: 6px 8px;
+	.prose :global(li::before) {
+		content: "";
+		position: absolute;
+		left: 3px;
+		top: 0.8em;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--accent) 45%, transparent);
 	}
 
-	@media screen and (max-width: 768px) {
-		#container {
-			display: flex;
-			flex-direction: column;
+	.prose :global(li > p) {
+		margin: 0;
+	}
+
+	.prose :global(code) {
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		background: var(--surface-2);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 1px 6px;
+	}
+
+	/* ── 区块标题 ─────────────────────────────── */
+	.section {
+		margin-top: 60px;
+	}
+
+	.section-title {
+		font-size: 21px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--text);
+		margin: 0 0 8px;
+	}
+
+	.section-intro {
+		font-size: 15px;
+		color: var(--text-3);
+		margin: 0 0 22px;
+	}
+
+	.section-intro :global(strong) {
+		color: var(--text-2);
+		font-weight: 600;
+	}
+
+	/* ── 项目卡片 ─────────────────────────────── */
+	.cards {
+		display: grid;
+		gap: 12px;
+	}
+
+	.card {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 18px 20px;
+		box-shadow: var(--shadow);
+		transition: transform 0.18s ease, border-color 0.18s ease;
+	}
+
+	.card:hover {
+		transform: translateY(-2px);
+		border-color: var(--border-strong);
+	}
+
+	.card-head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 14px;
+	}
+
+	.card-emoji {
+		font-size: 20px;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
+	.card-title {
+		font-size: 17px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		line-height: 1.5;
+		margin: 0;
+	}
+
+	.card-title a {
+		color: var(--text);
+		text-decoration: none;
+	}
+
+	.card-title a::after {
+		content: "↗";
+		font-size: 0.78em;
+		color: var(--text-3);
+		margin-left: 6px;
+		transition: color 0.15s ease;
+	}
+
+	.card-title a:hover::after {
+		color: var(--accent);
+	}
+
+	.meta {
+		margin: 0;
+		display: grid;
+		gap: 7px;
+	}
+
+	.meta-row {
+		display: grid;
+		grid-template-columns: 58px minmax(0, 1fr);
+		gap: 14px;
+		align-items: baseline;
+	}
+
+	.meta-row dt {
+		font-size: 12px;
+		letter-spacing: 0.04em;
+		color: var(--text-3);
+	}
+
+	.meta-row dd {
+		margin: 0;
+		font-size: 14.5px;
+		line-height: 1.8;
+		color: var(--text-2);
+	}
+
+	.meta-row dd a {
+		color: var(--accent);
+		text-decoration: none;
+	}
+
+	.meta-row dd a:hover {
+		text-decoration: underline;
+	}
+
+	/* ── 平台链接网格 ─────────────────────────── */
+	.links {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+		gap: 10px;
+	}
+
+	.link-card {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		padding: 14px 16px;
+		text-decoration: none;
+		transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+	}
+
+	.link-card:hover {
+		transform: translateY(-2px);
+		border-color: var(--border-strong);
+		background: var(--surface-2);
+	}
+
+	.link-name {
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--text);
+		line-height: 1.6;
+	}
+
+	.link-desc {
+		font-size: 12.5px;
+		line-height: 1.65;
+		color: var(--text-3);
+	}
+
+	.link-handle {
+		font-size: 12.5px;
+		line-height: 1.65;
+		color: var(--accent);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.link-text {
+		font-size: 12.5px;
+		line-height: 1.65;
+		color: var(--text-2);
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	/* ── 页脚注 ───────────────────────────────── */
+	.updated {
+		margin: 56px 0 0;
+		font-size: 13px;
+		color: var(--text-3);
+		text-align: center;
+	}
+
+	@media (max-width: 640px) {
+		.prose {
+			font-size: 16px;
+			line-height: 1.85;
 		}
 
-		h1 {
-			line-height: 1.5;
+		.section {
+			margin-top: 46px;
+		}
+
+		.card {
+			padding: 16px 17px;
+		}
+
+		.meta-row {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1px;
+		}
+
+		.links {
+			grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
 		}
 	}
 </style>
