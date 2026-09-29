@@ -19,7 +19,7 @@ export default defineConfig({
 
   vite: {
     server: {
-      allowedHosts: ['yxrhub.com'],
+      allowedHosts: ['localhost:4321', 'yxrhub.com'],
     },
     ssr: {
       // 打包外部依赖，不依赖 node_modules 即可运行
