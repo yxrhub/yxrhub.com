@@ -57,9 +57,8 @@
 ## 8. 验证方式
 
 ```bash
-pnpm astro check
-pnpm build
-pnpm dev
+pnpm build   # 构建通过(当前唯一强制校验关卡)
+pnpm dev     # 手工验证
 ```
 
 手工验证步骤:
