@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 800" width="100%" role="img" font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <title>yxrhub.com 系统分层架构图</title>
+  <desc>自上而下分为客户端层、应用层、服务模块层、数据访问层、存储与外部服务五层，箭头表示调用与依赖方向。</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="800" fill="#FFFFFF"/>
+
+  <rect x="40" y="56" width="600" height="94" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="0.5"/>
+  <text x="60" y="80" font-size="13" font-weight="500" fill="#185FA5">客户端层 · Browser</text>
+  <rect x="60" y="92" width="272" height="44" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text x="196" y="114" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#042C53">浏览器 / 移动端</text>
+  <rect x="348" y="92" width="272" height="44" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text x="484" y="114" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#042C53">React 岛屿 · client:idle</text>
+
+  <path d="M340 152L340 174" fill="none" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="40" y="178" width="600" height="172" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="0.5"/>
+  <text x="60" y="202" font-size="13" font-weight="500" fill="#534AB7">应用层 · Astro SSR（Node standalone，:4321）</text>
+  <rect x="60" y="214" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="196" y="235" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">middleware.ts</text>
+  <text x="196" y="254" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">会话注入 locals.user / session</text>
+  <rect x="348" y="214" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="484" y="235" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">路由层 pages/</text>
+  <text x="484" y="254" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">index · api/auth/[...all]</text>
+  <rect x="60" y="280" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="196" y="301" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">视图层 layouts/ + components/</text>
+  <text x="196" y="320" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">Layout · Header · Welcome</text>
+  <rect x="348" y="280" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="484" y="301" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">内容源 content/index.md</text>
+  <text x="484" y="320" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">compiledContent() 服务端编译</text>
+
+  <path d="M340 352L340 374" fill="none" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="40" y="378" width="600" height="106" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="0.5"/>
+  <text x="60" y="402" font-size="13" font-weight="500" fill="#534AB7">服务模块层 · Auth</text>
+  <rect x="60" y="414" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="196" y="435" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">lib/auth.ts</text>
+  <text x="196" y="454" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">better-auth server · GitHub OAuth</text>
+  <rect x="348" y="414" width="272" height="56" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="484" y="435" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#26215C">lib/auth-client.ts</text>
+  <text x="484" y="454" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#534AB7">浏览器端 client（usernameClient）</text>
+
+  <path d="M340 486L340 508" fill="none" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="40" y="512" width="600" height="106" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="0.5"/>
+  <text x="60" y="536" font-size="13" font-weight="500" fill="#0F6E56">数据访问层 · Data</text>
+  <rect x="60" y="548" width="272" height="56" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="196" y="569" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#04342C">drizzle-orm + drizzleAdapter</text>
+  <text x="196" y="588" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0F6E56">node-postgres 连接池</text>
+  <rect x="348" y="548" width="272" height="56" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="484" y="569" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#04342C">db/schema/auth.ts</text>
+  <text x="484" y="588" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#0F6E56">类型安全表结构 + relations</text>
+
+  <path d="M340 620L340 642" fill="none" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="40" y="646" width="600" height="106" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="0.5"/>
+  <text x="60" y="670" font-size="13" font-weight="500" fill="#5F5E5A">存储与外部服务</text>
+  <rect x="60" y="682" width="178" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="149" y="703" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#2C2C2A">PostgreSQL</text>
+  <text x="149" y="722" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A">4 张认证表</text>
+  <rect x="250" y="682" width="178" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="339" y="703" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#2C2C2A">GitHub OAuth</text>
+  <text x="339" y="722" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A">第三方身份提供方</text>
+  <rect x="440" y="682" width="178" height="56" rx="8" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="529" y="703" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="500" fill="#2C2C2A">Google Analytics 4</text>
+  <text x="529" y="722" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#5F5E5A">仅生产环境注入</text>
+
+  <text x="340" y="778" text-anchor="middle" font-size="12" fill="#5F5E5A">箭头表示调用 / 依赖方向 ｜ 生产构建后由 node dist/server/entry.mjs 启动（:4321）</text>
+</svg>
