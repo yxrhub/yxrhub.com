@@ -9,7 +9,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "@astrojs/node": "^11.0.0",

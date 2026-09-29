@@ -57,6 +57,7 @@ pnpm dev          # http://localhost:4321
 | `pnpm dev` | 启动开发服务器 |
 | `pnpm build` | 生产构建,产出 `dist/` |
 | `pnpm preview` | 预览构建产物 |
+| `pnpm release` | 构建并发布容器镜像到 GHCR |
 | `pnpm drizzle-kit generate` | 由 schema 生成迁移 |
 
 > 类型检查需先安装 `pnpm add -D @astrojs/check typescript`,之后可使用 `pnpm astro check`。
@@ -92,6 +93,17 @@ docker run -p 4321:4321 --env-file .env.production yxrhub
 ```
 
 生产环境务必设置 `BETTER_AUTH_URL` 为正式域名,否则 OAuth 回调地址会不匹配。
+
+### 发布到 GHCR
+
+仓库自带发布脚本,自动生成时间戳标签并推送 `latest`:
+
+```bash
+docker login ghcr.io     # 首次需要
+pnpm release             # 构建 → 打 latest → 推送 ghcr.io/yxrhub/yxrhub.com:{时间戳,latest}
+```
+
+支持 `--no-push`(只构建)、`--dry-run`(只打印命令)、以及传入自定义标签。细节见 [`AGENTS.md`](./AGENTS.md) 第 8 节。
 
 ---
 

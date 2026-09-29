@@ -30,6 +30,7 @@ pnpm install              # 安装依赖(首次,使用 frozen-lockfile 保持一
 pnpm dev                  # 本地开发,默认 http://localhost:4321
 pnpm build                # 生产构建,产出 dist/(改完代码必跑)
 pnpm preview              # 预览构建产物
+pnpm release              # 构建并发布容器镜像到 GHCR(见第 8 节)
 pnpm drizzle-kit generate # 由 schema 生成迁移 SQL
 pnpm drizzle-kit migrate  # 应用迁移
 ```
@@ -187,7 +188,31 @@ npx astro dev stop     # 官方停服
 
 ---
 
-## 8. 文档索引
+## 8. 镜像发布
+
+镜像推送到 GitHub Container Registry,脚本为 [`scripts/release.sh`](./scripts/release.sh)。
+
+```bash
+pnpm release                               # 自动生成时间戳标签:构建 → 打 latest → 推送两个标签
+pnpm release --no-push                     # 只构建和打标签,不推送
+pnpm release 20260930093000                # 使用指定标签
+pnpm release --dry-run                     # 只打印将要执行的命令
+```
+
+**标签约定**:时间戳格式 `YYYYMMDDHHmmss`(**本地时间**),例如 `20260929231012`;外加一个浮动的 `latest`。
+
+**推送顺序**:先推时间戳标签,`latest` 最后推。这样中途失败时,`latest` 仍指向上一个可用版本,不会出现「`latest` 已更新但对应版本没推上去」的空窗。
+
+**前提**:需先 `docker login ghcr.io`(**凭据不要写进仓库或本文件**)。镜像目标平台为 `linux/amd64`,脚本默认带 `--platform linux/amd64`;用 `PLATFORM= pnpm release` 可改用构建机原生平台。
+
+**注意**:
+
+- 镜像构建自**当前工作区内容**,而非某个提交 —— 工作区有未提交改动时脚本会给出提示。发布前应确保所需改动已提交。
+- 镜像能正常运行的前提是 [`astro.config.mjs`](./astro.config.mjs) 中的 `ssr.noExternal: true`(见第 4 节红线 3),不要为了让镜像变小而改动它。
+
+---
+
+## 9. 文档索引
 
 | 文档                                                                 | 内容                      |
 | ------------------------------------------------------------------ | ----------------------- |
