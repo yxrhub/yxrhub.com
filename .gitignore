@@ -22,3 +22,6 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# agent workspace (session-local memory, not project artifacts)
+.workbuddy/
