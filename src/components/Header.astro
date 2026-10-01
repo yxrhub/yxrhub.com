@@ -1,5 +1,11 @@
 ---
 import LoginButton from "./LoginButton";
+
+// ⚠️ 这里刻意不做「管理员才显示后台入口」的服务端条件渲染。
+// 首页是预渲染的静态页，中间件里的 `isPrerendered` 短路分支会让 `Astro.locals.user`
+// 永远是 null —— 服务端条件在首页恒为 false，管理员根本看不到入口。
+// 因此后台入口下沉到 LoginButton 这个客户端岛屿里按 role 判断（登录态本来就是客户端解析的）。
+// 真正的访问控制在中间件，前端入口只是便利，不构成防护。
 ---
 
 <header class="site-header">
@@ -8,9 +14,9 @@ import LoginButton from "./LoginButton";
             <span class="brand-mark">Yxr</span>Hub
         </a>
         <nav class="nav" aria-label="站内导航">
-            <a href="#about">关于</a>
-            <a href="#projects">项目</a>
-            <a href="#find-me">足迹</a>
+            <a href="/#about">关于</a>
+            <a href="/#projects">项目</a>
+            <a href="/#find-me">足迹</a>
         </nav>
         <div class="account">
             <LoginButton client:idle />

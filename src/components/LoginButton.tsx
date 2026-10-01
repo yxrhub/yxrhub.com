@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { authClient } from "../lib/auth-client";
+import { isAdmin } from "../lib/authz";
 
 const pill: CSSProperties = {
     display: 'inline-flex',
@@ -37,11 +38,22 @@ const ghost: CSSProperties = {
     textUnderlineOffset: 3,
 };
 
+const adminLink: CSSProperties = {
+    fontSize: 13,
+    lineHeight: 1.6,
+    color: 'var(--accent)',
+    fontWeight: 500,
+    textDecoration: 'none',
+    padding: '6px 2px',
+    whiteSpace: 'nowrap',
+};
+
 export default function () {
     const [loading, setLoading] = useState(true)
     const [isLogin, setIsLogin] = useState(false)
     const [name, setName] = useState("")
     const [image, setImage] = useState<string | null | undefined>();
+    const [admin, setAdmin] = useState(false);
 
     useEffect(() => {
         const checkLogin = async () => {
@@ -53,6 +65,9 @@ export default function () {
                 setIsLogin(true);
                 setName(session.data.user.name);
                 setImage(session.data.user.image);
+                // 后台入口在这里判断而不是在 Header.astro 里 —— 首页是预渲染的静态页，
+                // 中间件对预渲染页面直接放行，服务端拿不到 locals.user。
+                setAdmin(isAdmin(session.data.user));
             } catch (err) {
                 setIsLogin(false)
             } finally {
@@ -75,6 +90,7 @@ export default function () {
 
     return isLogin ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {admin && <a href="/admin" style={adminLink}>管理</a>}
             <span style={identity}>
                 {image && (
                     <img

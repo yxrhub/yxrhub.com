@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins"
+import { admin, username } from "better-auth/plugins"
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { v7 } from "uuid";
 import * as schema from "../db/schema/auth";
@@ -25,7 +25,11 @@ export const auth = betterAuth({
         },
     },
     plugins: [
-        username()
+        username(),
+        // admin 插件提供 /api/auth/admin/* 全套管理端点。
+        // 权限校验全在服务端完成：adminMiddleware 保证存在有效会话，
+        // hasPermission 再按 user.role 判定是否为管理员（默认 adminRoles=["admin"]，defaultRole="user"）。
+        admin(),
     ],
     advanced: {
         database: {

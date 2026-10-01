@@ -1,0 +1,67 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import AdminConsole from "../../components/admin/AdminConsole";
+import { isAdmin } from "../../lib/authz";
+import "../../styles/admin.css";
+
+// 必须关闭预渲染。这不仅是惯例 —— 中间件里有 `context.isPrerendered` 短路分支，
+// 一旦本页被预渲染，后台守卫会被整个跳过，页面将变成人人可访问的静态 HTML。
+export const prerender = false;
+
+// 中间件已拦截非管理员，这里是第二道保险：即使守卫被误改，本页也不会渲染出内容。
+const allowed = isAdmin(Astro.locals.user);
+if (!allowed) {
+    Astro.response.status = 404;
+}
+---
+
+<Layout title="后台管理 — YxrHub" noindex wide>
+    {
+        allowed ? (
+            <section class="admin">
+                <header class="admin-head">
+                    <h1>用户管理</h1>
+                    <p class="admin-sub">
+                        已以管理员身份登录：<strong>{Astro.locals.user?.name}</strong>
+                    </p>
+                </header>
+
+                <div class="admin-panel">
+                    <AdminConsole client:load currentUserId={Astro.locals.user?.id ?? ""} />
+                </div>
+            </section>
+        ) : (
+            <p class="admin-denied">404 Not Found</p>
+        )
+    }
+</Layout>
+
+<style>
+    .admin {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .admin-head h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+    }
+
+    .admin-sub {
+        margin: 6px 0 0;
+        color: var(--text-2);
+        font-size: 14px;
+    }
+
+    /* 这里刻意不做卡片外观 —— 表格、抽屉各自有自己的表面层次，
+       再套一层卡片会出现双重边框。 */
+    .admin-panel {
+        min-height: 120px;
+    }
+
+    .admin-denied {
+        color: var(--text-3);
+    }
+</style>

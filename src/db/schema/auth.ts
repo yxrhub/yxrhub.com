@@ -23,6 +23,12 @@ export const user = pgTable("user", {
     .notNull(),
   username: text("username").unique(),
   displayUsername: text("display_username"),
+  // 以下四列由 better-auth 的 admin 插件定义，字段名同样是数据契约，不可改。
+  // role 可空：迁移前的存量用户为 NULL，better-auth 会按 defaultRole("user") 处理。
+  role: text("role"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
 });
 
 export const session = pgTable(
@@ -42,6 +48,8 @@ export const session = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // admin 插件用：标记该会话由哪个管理员模拟登录产生；为空则是普通会话
+    impersonatedBy: text("impersonated_by"),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
 );

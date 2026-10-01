@@ -34,7 +34,7 @@ yxrhub.com 是「叶小睿 (Yxr)」个人品牌的**核心数字枢纽**，承�
 | 认证 | better-auth | ^1.6.20 | OAuth / Session / 账号管理 |
 | 认证桥接 | `@better-auth/drizzle-adapter` | ^1.6.20 | better-auth 与 Drizzle 的适配 |
 | ORM | drizzle-orm | ^0.45.2 | 类型安全 SQL、Schema 定义 |
-| 迁移工具 | drizzle-kit | ^0.31.10 | 生成/推送数据库迁移 |
+| 数据库同步 | drizzle-kit | ^0.31.10 | `push` 将 schema 变更同步到开发库 |
 | 数据库驱动 | `pg` (node-postgres) | ^8.22.0 | PostgreSQL 连接池 |
 | 数据库 | PostgreSQL | 外部托管 | 持久化存储 |
 | 主键生成 | `uuid` v7 | ^14.0.1 | 单调递增 UUID |
@@ -55,26 +55,37 @@ yxrhub.com/
 │   │   ├── astro.svg
 │   │   └── background.svg
 │   ├── components/          # 可复用 UI 单元
+│   │   ├── admin/           # 后台管理界面（均为 React 岛屿）
+│   │   │   ├── AdminConsole.tsx        # 主容器：搜索 / 分页 / 用户表格
+│   │   │   ├── UserDrawer.tsx          # 编辑抽屉：资料 / 角色 / 安全 / 会话 / 危险操作
+│   │   │   ├── CreateUserDialog.tsx    # 新建用户表单
+│   │   │   ├── ConfirmDialog.tsx       # 危险操作二次确认
+│   │   │   ├── ImpersonationBanner.tsx # 模拟登录常驻提示条（挂在 Layout）
+│   │   │   └── types.ts                # 共享类型 + 错误码中文化
 │   │   ├── Header.astro     # 站点头部（内嵌 LoginButton 岛屿）
 │   │   ├── Footer.astro     # 站点页脚
 │   │   ├── Welcome.astro    # 首页内容渲染（编译 content/index.md）
 │   │   ├── GoogleTag.astro  # GA4 埋点（仅生产环境注入）
-│   │   └── LoginButton.tsx  # React 岛屿：登录/注销
+│   │   └── LoginButton.tsx  # React 岛屿：登录/注销 + 管理员入口
 │   ├── content/
 │   │   └── index.md         # 首页正文（Markdown 单一数据源）
 │   ├── db/
 │   │   └── schema/
 │   │       └── auth.ts      # 数据库表结构（user/session/account/verification）
 │   ├── layouts/
-│   │   └── Layout.astro     # 全局布局壳（head/meta/背景/Header/Footer）
+│   │   └── Layout.astro     # 全局布局壳（head/meta/背景/Header/Footer/设计令牌）
 │   ├── lib/
 │   │   ├── auth.ts          # better-auth 服务端实例（含 DB 连接）
-│   │   └── auth-client.ts   # better-auth 浏览器端客户端
+│   │   ├── auth-client.ts   # better-auth 浏览器端客户端
+│   │   └── authz.ts         # isAdmin()：中间件与岛屿共用的角色判定
 │   ├── pages/
+│   │   ├── admin/index.astro     # 后台路由 /admin（SSR 外壳 + 岛屿挂载点）
 │   │   ├── api/auth/[...all].ts  # 认证 API 全量兜底路由
 │   │   └── index.astro      # 首页路由 /
+│   ├── styles/
+│   │   └── admin.css        # 后台版式（全局 CSS，仅 /admin 页面引入）
 │   ├── env.d.ts             # App.Locals 类型增强
-│   └── middleware.ts        # 全局中间件：会话注入
+│   └── middleware.ts        # 全局中间件：会话注入 + 后台守卫
 ├── public/                  # 不经构建、原样拷贝的资源
 │   ├── favicon.ico
 │   └── robots.txt
@@ -207,17 +218,21 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   baseURL: BETTER_AUTH_URL,
   socialProviders: { github: { clientId, clientSecret } },
-  plugins: [username()],
+  plugins: [username(), admin()],
   advanced: { database: { generateId: () => v7() } },
 });
 ```
 
 - **适配器**：`drizzleAdapter` 直连 `drizzle(DATABASE_URL)`，表结构由 `src/db/schema/auth.ts` 提供。
-- **插件**：`username()` 启用用户名注册/登录（对应表中 `username`、`displayUsername` 字段）。
+- **插件**：
+  - `username()` 启用用户名注册/登录（对应表中 `username`、`displayUsername` 字段）。
+  - `admin()` 提供 `/api/auth/admin/*` 共 15 个管理端点（用户增删改查、角色、封禁、会话吊销、模拟登录）。**权限校验全部在服务端完成**：`adminMiddleware` 保证存在有效会话，`hasPermission({ role })` 再按 `adminRoles`（默认 `["admin"]`）判定。自建一套 `/api/admin/*` 等于把最容易出错的部分重写一遍，因此明确不采用。
 - **主键策略**：全局覆写为 **UUID v7**，单调递增，索引局部性优于 v4。注意 `db/schema/auth.ts` 中列默认值是 `gen_random_uuid()`（v4），仅作为数据库兜底——**正常写入路径均由 better-auth 生成 v7**。
 - **Base URL**：必须与部署域名一致（`BETTER_AUTH_URL`），否则 OAuth 回调地址会错。
 
-**客户端实例要点**（`src/lib/auth-client.ts`）：`createAuthClient` 需注册与服务端**同名**的插件（`usernameClient()`），否则调用对应 API 会 404。客户端不接收任何密钥。
+**客户端实例要点**（`src/lib/auth-client.ts`）：`createAuthClient` 需注册与服务端**同名**的插件（`usernameClient()`、`adminClient()`），否则调用对应 API 会 404。客户端不接收任何密钥。
+
+> **方法名由路径推导**：客户端代理把调用路径 kebab-case 后拼成 URL（`authClient.admin.updateUser` → `/admin/update-user`），与端点定义里的键名（`adminUpdateUser`）无关。改端点路径即等于改前端方法名。
 
 **API 路由要点**（`src/pages/api/auth/[...all].ts`）：`export const prerender = false` 强制该路由走 SSR；`ALL` 处理器把原始 `Request` 直接交给 `auth.handler`，不在 Astro 层做任何加工，保证 better-auth 全量端点（`sign-in/social`、`callback/*`、`sign-out`、`get-session` 等）开箱可用。若未来需要限流，注释中提示应设置 `x-forwarded-for`。
 
@@ -226,7 +241,7 @@ export const auth = betterAuth({
 | 文件 | 职责 |
 | --- | --- |
 | `src/db/schema/auth.ts` | 表定义与关系（relations） |
-| `drizzle.config.ts` | 迁移输出目录 `./drizzle`、schema 目录、PostgreSQL dialect |
+| `drizzle.config.ts` | schema 目录与 PostgreSQL dialect（`out: ./drizzle` 为迁移输出目录，当前未使用） |
 
 **数据模型（ERD）**：
 
@@ -243,6 +258,10 @@ erDiagram
         text image
         text username UK
         text display_username
+        text role "admin 插件"
+        boolean banned "admin 插件"
+        text ban_reason "admin 插件"
+        timestamp ban_expires "admin 插件"
         timestamp created_at
         timestamp updated_at
     }
@@ -252,6 +271,7 @@ erDiagram
         timestamp expires_at
         text ip_address
         text user_agent
+        text impersonated_by "非空=模拟登录产生"
         uuid user_id FK
     }
     account {
@@ -275,10 +295,13 @@ erDiagram
 **要点**：
 
 - 四张表由 better-auth 的数据契约决定，**字段名（snake_case）不可随意改动**，否则认证链路直接失效。
+- `role` / `banned` / `ban_reason` / `ban_expires` / `impersonated_by` 是 `admin()` 插件要求的字段，由 `drizzle-kit push` 增补；全部可空，存量数据不受影响。
+- `role` 支持**多值**（逗号分隔，如 `"admin,editor"`）——判定必须按分隔后精确匹配，`role.includes("admin")` 会把 `"superadmin"` 误判为管理员（见 `src/lib/authz.ts`）。
 - 外键均带 `onDelete: "cascade"`：删除用户即级联清理 session / account。
 - 已建索引：`session.userId`、`account.userId`、`verification.identifier`。
-- 迁移流程：修改 `src/db/schema/` → `pnpm drizzle-kit generate` → 审核生成的 SQL → `pnpm drizzle-kit migrate/push`。**不要手写 DDL 绕过 drizzle-kit。**
-- `drizzle/` 目录为迁移产物，当前未纳入仓库，首次生成后建议提交以便环境可复现。
+- 变更流程：修改 `src/db/schema/` → `pnpm drizzle-kit push` 直接同步到数据库。**不要手写 DDL 绕过 drizzle-kit。**
+- **本项目刻意不使用迁移文件**：仓库无 `drizzle/` 目录，库中也没有 `__drizzle_migrations` 表。开发期表结构变动频繁，`push` 免去了维护迁移链的成本。代价是**没有版本记录、没有回滚路径**——因此只适用于开发库。
+- ⚠️ **走向生产库前必须重新评估**：届时需建立迁移基线并改用 `generate` + `migrate`。对生产库直接 `push` 会在无任何记录的情况下改动结构，风险极高。
 
 ### 5.5 中间件模块
 
@@ -289,12 +312,45 @@ if (context.isPrerendered) return next();   // 预渲染页面直接放行
 const isAuthed = await auth.api.getSession({ headers: context.request.headers });
 context.locals.user = isAuthed?.user ?? null;
 context.locals.session = isAuthed?.session ?? null;
+
+// 后台守卫：非管理员一律 404，不暴露后台是否存在
+if (context.url.pathname === "/admin" || context.url.pathname.startsWith("/admin/")) {
+  if (!isAdmin(context.locals.user)) return new Response(NOT_FOUND_BODY, { status: 404 });
+}
 return next();
 ```
 
 - **预渲染短路**：`context.isPrerendered` 分支是刻意保留的修补——静态页面访问 `Astro.request.headers` 会触发警告且语义无意义，因此提前 return。**新增预渲染页面时依赖此分支，不要删除。**
+- ⚠️ **短路的副作用**：预渲染页面上 `Astro.locals.user` **永远是 `null`**。因此**任何依赖登录态的渲染都必须放在岛屿里做客户端判断**，不能在 `.astro` 里写 `Astro.locals.user &&` 之类的条件——首页是预渲染的，这样写的分支永远不会生效（这是「管理入口不显示」这类 bug 的根因）。
+- **后台守卫返回 404 而非 403 / 重定向**：403 等于告诉探测者「这里有东西」，重定向到登录页同理。404 让 `/admin` 与任意不存在的路径在响应上无从区分。
 - **类型契约**：`src/env.d.ts` 通过 `declare namespace App { interface Locals }` 把 `user` / `session` 注入 Astro 的 `locals` 类型，页面中可直接 `Astro.locals.user` 并获得补全。
 - **性能注意**：中间件对**所有** SSR 请求（含静态资源类路由）都会查一次 session。当前站点访问量小可接受；若路由数量增长，应按路径前缀做条件跳过。
+
+### 5.6 后台管理模块
+
+**形态**：单页 `/admin`，左侧用户表格 + 右侧抽屉。没有独立的管理 API 层——所有动作直接调用 `admin()` 插件提供的端点（`authClient.admin.*`）。
+
+| 能力 | 端点 | 关键约定 |
+| --- | --- | --- |
+| 列表 / 搜索 / 分页 | `list-users` | 搜索字段只支持 `email` / `name`；用户名需退回 `filterField=username` + `filterOperator=contains` |
+| 资料编辑 | `update-user` | body 是 `{ userId, data }`，`data` 为自由字段表；**只提交真正改动的字段**，空对象会报 `NO_DATA_TO_UPDATE` |
+| 角色变更 | `set-role` | `role` 接受字符串或数组 |
+| 封禁 / 解封 | `ban-user` / `unban-user` | 插件在封禁时会**自动吊销该用户全部会话**，无需前端补刀 |
+| 会话管理 | `list-user-sessions` / `revoke-user-session` / `revoke-user-sessions` | 会话对象的 `token` 即吊销凭据 |
+| 设置密码 | `set-user-password` | GitHub-only 账号会补建 `credential` account；**不会**吊销已有会话 |
+| 新建 / 删除 | `create-user` / `remove-user` | `create-user` 无 `username` 顶层字段，需塞进 `data`；删除会级联清理会话 |
+| 模拟登录 | `impersonate-user` / `stop-impersonating` | 见下方专门说明 |
+
+**自我操作防护**：`ban-user` / `remove-user` 由插件直接拒绝（`YOU_CANNOT_BAN_YOURSELF` / `YOU_CANNOT_REMOVE_YOURSELF`）；变更自己的角色在界面上禁用，避免把自己降级后无人可管理。危险操作（改角色 / 删除）走 `ConfirmDialog` 二次确认，删除还要求逐字输入目标邮箱。
+
+**模拟登录的两个必然推论**（改这块前务必先读）：
+
+1. **提示条必须挂在全局 `Layout.astro`，不能只放后台页面。** 模拟后当前身份是被模拟的普通用户，`/admin` 会被中间件拦成 404——若提示条只存在于后台，管理员一进入模拟就再也点不到「退出模拟」。而且 404 响应是中间件直接返回的裸 HTML，**不含 Layout**，所以退出模拟要在有站点外壳的页面上操作。
+2. **模拟成功后必须整页跳到首页**，不能在原地刷新：当前位置对新的身份已经不可见。
+
+**渲染组织**：`AdminConsole` 是唯一的数据持有者（列表、分页、toast），`UserDrawer` 只接收单个用户对象并在写操作成功后用响应里的最新用户回调父级刷新。这样避免了多处状态副本不一致。
+
+**样式位置**：后台版式放全局 CSS `src/styles/admin.css`（React 岛屿内的 DOM 拿不到 `.astro` 的作用域样式），只在 `/admin` 页面 `import`。语义色 `--danger` / `--ok` / `--warn` 属于站点令牌，统一在 `Layout.astro` 里定义——因为模拟登录提示条挂在全局 Layout 上，后台样式表可能根本没加载。
 
 ---
 
@@ -359,11 +415,14 @@ sequenceDiagram
 
 | 场景 | 入口 | 说明 |
 | --- | --- | --- |
-| 服务端渲染 | `middleware.ts` | 一次 DB 查询，结果写入 `Astro.locals` |
+| SSR 页面 | `middleware.ts` | 一次 DB 查询，结果写入 `Astro.locals`。**仅对未预渲染的页面有效** |
+| 预渲染页面 | 只能走客户端岛屿 | 中间件在该分支提前 return，`locals.user` 恒为 `null` |
 | 客户端岛屿 | `authClient.getSession()` | 浏览器发起请求，经 `/api/auth/get-session` |
 | API 路由 | `auth.handler` 内部 | better-auth 自行校验，不依赖中间件 |
 
 **双通道设计的原因**：SSR 需要首屏即知登录态（SEO / 避免闪烁），而岛屿需要交互后刷新状态。两者最终读同一张 `session` 表，因此不会不一致。
+
+**当前站点的实际切分**：首页 `/` 是预渲染的静态页（`dist/client/index.html`），因此**无法**在服务端渲染登录态——头部登录按钮与管理员入口都在 `LoginButton` 岛屿里由客户端判定；`/admin` 与认证 API 走 SSR，服务端守卫生效。
 
 ### 6.4 构建与部署
 
@@ -414,6 +473,9 @@ graph LR
 | ADR-08 | 表结构由 better-auth 契约决定 | 保证认证链路稳定 | 登录直接失效 |
 | ADR-09 | 首页采用「Markdown 散文 + frontmatter 结构化数据」混合模式 | 散文保持可读可编辑,清单获得类型化结构以渲染卡片;避免用 `:has()` 从渲染后的 HTML 反推结构 | 内容契约与 `DocFrontmatter` 接口需同步,否则渲染缺字段 |
 | ADR-10 | 全站配色走 CSS 变量 + `prefers-color-scheme`,不引入 CSS 框架 | 零新增依赖、体积可控、深色模式一处生效 | 组件内硬编码颜色会导致深色模式失效 |
+| ADR-11 | 后台能力委托 `admin()` 插件，不自建 `/api/admin/*` | 会话校验、角色判定、CSRF 都由插件完成；自建等于重写最易出错的部分 | 权限漏洞 |
+| ADR-12 | 后台入口在客户端岛屿判定，不做服务端条件渲染 | 首页是预渲染页，中间件短路导致 `locals.user` 恒为 null，服务端条件永远不成立 | 管理员看不到入口 |
+| ADR-13 | 模拟登录提示条挂在全局 `Layout` | 模拟期间 `/(admin)` 对新身份是 404 且裸 HTML，只有全局页面才能退出模拟 | 进入模拟后无法自行退出 |
 
 ---
 
@@ -425,6 +487,8 @@ graph LR
 2. 用 `<Layout>` 包裹，复用 Header / Footer。
 3. 若需登录态：`Astro.locals.user`（中间件已注入）。
 4. 若该页无需登录态且内容静态，可加 `export const prerender = true` 走静态生成。
+5. ⚠️ **反过来更重要**：需要登录态或权限的页面必须显式 `export const prerender = false`。默认 `output: "static"`，页面**默认就是预渲染的**，而预渲染会跳过中间件里全部依赖 headers 的逻辑——守卫形同虚设。
+6. 预渲染页面里读不到 `Astro.locals.user`，登录态相关的渲染只能交给岛屿。
 
 ### 新增 API 接口
 
@@ -435,7 +499,7 @@ graph LR
 ### 新增数据表
 
 1. 在 `src/db/schema/` 新建或扩展 schema 文件，使用 `pgTable` 并**补充 `relations`**。
-2. 运行 `pnpm drizzle-kit generate` 生成迁移，人工审核 SQL。
+2. 运行 `pnpm drizzle-kit push` 将变更同步到开发库（开发期不产生迁移文件，理由见 5.4）。
 3. 需要被业务层直接使用时，从 `lib/` 下暴露查询函数，不要在页面里直连 ORM。
 
 ### 新增第三方登录
@@ -459,7 +523,7 @@ graph LR
 | --- | --- | --- |
 | 无自动化测试 | 无 test 脚本、无 CI | 至少补 `astro check` + 构建校验的 CI 流水线 |
 | 无代码风格工具 | 缺少 ESLint / Prettier 配置 | 引入统一的 lint + format，防止风格漂移 |
-| 迁移目录未入库 | `drizzle/` 未提交 | 首次生成后纳入版本控制 |
+| 无迁移机制 | 开发期刻意使用 `drizzle-kit push`，无迁移文件与版本记录 | 上生产前建立迁移基线，改用 `generate` + `migrate` |
 | 探活缺失 | 容器无 healthcheck | Dockerfile 增加 `HEALTHCHECK`，便于编排 |
 | 中文注释混排 | 部分源码中文注释 | 保持现状即可，但对外文档建议统一中文 |
 | README 过薄 | 曾仅一行标题 | 已补充快速开始与文档索引 |
