@@ -167,4 +167,16 @@ Astro 的 `<style>` 默认是**作用域样式**：编译时会给选择器加�
 
 改动本身不算大：一个内容契约、一套设计令牌、一组卡片与网格、一条作用域规则。
 
+<figure>
+  <img src="/images/blog/2026-09-29-homepage-redesign-1.jpg" alt="重构后的首页首屏，含标题、自我介绍与项目区块起始" width="1440" height="1000" loading="lazy" decoding="async">
+  <figcaption>重构后的首页首屏。颜色、字体、圆角、阴影全部取自设计令牌，组件里没有一处硬编码的颜色——这正是第二节那条规则的作用。（2026-10-01 截图）</figcaption>
+</figure>
+
+同一版首页的整页留档，补上首屏之外的部分：
+
+<figure>
+  <img src="/images/blog/2026-09-29-homepage-redesign-2.jpg" alt="首页整页长图，包含关于、项目与平台链接三个区块" width="2400" height="4356" loading="lazy" decoding="async">
+  <figcaption>整页留档。这一版的设计定于 09-29；截图取自 10-01，此时首页还没有第五篇之后新增的开发日志区块——所以这张图记录的准确说是"这一版设计"，而不是"某个瞬间的首页"。（2026-10-01 截图）</figcaption>
+</figure>
+
 但做完之后，改动首页的心理成本明显降低了——文案调整只碰 Markdown，版式调整只碰 CSS 变量和组件样式。**这才是重构真正的产出：不是当前这版页面好不好看，而是下一版改起来有多便宜。**

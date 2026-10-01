@@ -234,9 +234,74 @@
 }
 
 .prose img {
+    display: block;
     max-width: 100%;
     height: auto;
     border-radius: 10px;
+}
+
+/*
+ * 截图用 <figure> + <figcaption>。写法见 AGENTS.md 红线 15：
+ * `figure` 必须是块级（前后空行、标签独占一行），且内部只能写 HTML `<img>`——
+ * 原始 HTML 块里的 Markdown 图片语法不会被解析。
+ */
+.prose figure {
+    margin: 2.2em 0;
+}
+
+.prose figure img {
+    width: 100%;
+    border: 1px solid var(--border);
+    /* 截图基本是浅色底，落在暗色页面上会「发光」，用一圈边界加投影把它框住 */
+    box-shadow: 0 1px 2px rgba(16, 21, 40, 0.05), 0 16px 34px -22px rgba(16, 21, 40, 0.38);
+}
+
+.prose figcaption {
+    margin-top: 11px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--text-3);
+}
+
+.prose figcaption strong {
+    color: var(--text-2);
+}
+
+/*
+ * 截图的原始视口是 1200px，直接塞进 720px 的正文栏会被缩到 0.6 倍，
+ * 图里的正文就小到看不清了。窗口够宽时让图片向外「破栏」到 960px。
+ * 960 = 720 + 240，两侧各需 120px 余量，而 1100px 视口两侧各有约 170px，
+ * 因此断点取 1100 是安全的（不会撑出横向滚动条）。
+ */
+@media (min-width: 1100px) {
+    .prose figure {
+        width: calc(100% + 240px);
+        margin-inline: -120px;
+    }
+}
+
+/* 并排两张竖屏截图。一对图不破栏：720px 栏内每张约 350px，正好接近真机 375px 的观感 */
+.prose figure.is-pair {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-start;
+    width: auto;
+    margin-inline: 0;
+}
+
+.prose figure.is-pair img {
+    flex: 1 1 0;
+    /*
+     * `min-width` 是换行的判据，不能省。`flex-basis: 0` 让两张图默认总在同一行，
+     * 窄屏下会被一路压到 160px 也不折行——竖屏截图压到那个宽度就没法看了。
+     * 给它一个下限，放不下时才会老实换行成上下排列。
+     */
+    min-width: 240px;
+}
+
+.prose figure.is-pair figcaption {
+    flex-basis: 100%;
 }
 
 /* ── 窄屏 ─────────────────────────────────────── */
