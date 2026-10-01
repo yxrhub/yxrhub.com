@@ -43,8 +43,7 @@ cp .env.example .env
 #   / GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
 
 # 3. 初始化数据库(首次)
-pnpm drizzle-kit generate
-pnpm drizzle-kit migrate
+pnpm drizzle-kit push
 
 # 4. 启动开发服务器
 pnpm dev          # http://localhost:4321
@@ -58,7 +57,7 @@ pnpm dev          # http://localhost:4321
 | `pnpm build` | 生产构建,产出 `dist/` |
 | `pnpm preview` | 预览构建产物 |
 | `pnpm release` | 构建并发布容器镜像到 GHCR |
-| `pnpm drizzle-kit generate` | 由 schema 生成迁移 |
+| `pnpm drizzle-kit push` | 将 schema 变更同步到数据库 |
 
 > 类型检查需先安装 `pnpm add -D @astrojs/check typescript`,之后可使用 `pnpm astro check`。
 

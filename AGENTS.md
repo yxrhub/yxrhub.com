@@ -31,8 +31,7 @@ pnpm dev                  # 本地开发,默认 http://localhost:4321
 pnpm build                # 生产构建,产出 dist/(改完代码必跑)
 pnpm preview              # 预览构建产物
 pnpm release              # 构建并发布容器镜像到 GHCR(见第 8 节)
-pnpm drizzle-kit generate # 由 schema 生成迁移 SQL
-pnpm drizzle-kit migrate  # 应用迁移
+pnpm drizzle-kit push     # 将 schema 变更同步到数据库(开发期,不产生迁移文件)
 ```
 
 > `pnpm astro check`(类型检查)**当前不可用**——`@astrojs/check` 与 `typescript` 未列入 `devDependencies`。执行前需先 `pnpm add -D @astrojs/check typescript`。在补齐之前,以 `pnpm build` 作为唯一强制校验关卡。
@@ -69,7 +68,12 @@ pnpm drizzle-kit migrate  # 应用迁移
 5. **React 组件不加水合指令就是静态 HTML。** 需要交互必须显式写 `client:load` / `client:idle` / `client:visible`。
 6. **服务端密钥走 `process.env`(空前缀已加载);浏览器可读的变量必须用 `PUBLIC_` 前缀。** 不要把 `DATABASE_URL`、`*_SECRET` 暴露到客户端。
 7. **`.env*` 与真实密钥永不写入仓库、日志或文档。**
-8. **数据库变更只能通过修改 schema + `drizzle-kit generate`**,不手写 DDL、不手工改表。
+8. **数据库变更通过修改 `src/db/schema/` + `drizzle-kit push` 同步**,不手写 DDL、不手工改表。
+   本项目处于**开发期**,表结构变动频繁,**刻意不使用迁移文件**——仓库无 `drizzle/` 目录、库中也没有 `__drizzle_migrations` 表,当前连接的是**开发库**。这是有意选择,不是遗漏,**不要"顺手"去补迁移文件**。
+   > ⚠️ **但从开发库走向生产库之前,必须重新评估并引入正式迁移机制。** 届时绝不可对生产库直接 `push`(它会直接改结构、无版本记录、无回滚路径)。
+9. **需要登录态或权限的页面必须写 `export const prerender = false`。** 默认 `output: "static"`,页面默认预渲染;预渲染会跳过中间件所有依赖 headers 的逻辑,权限守卫会整体失效。
+10. **不要在 `.astro` 里用 `Astro.locals.user` 做预渲染页面的条件渲染。** 预渲染页面的 `locals.user` 恒为 `null`,分支永远不成立。登录态渲染一律交给 React 岛屿在客户端判断(首页的登录按钮与管理入口即如此)。
+11. **角色判定必须按分隔后精确匹配 `role`。** `role` 支持逗号分隔多值,`role.includes("admin")` 会把 `superadmin` 误判为管理员;统一用 `src/lib/authz.ts` 的 `isAdmin()`。
 
 ---
 
