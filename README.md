@@ -12,7 +12,8 @@
 | --- | --- |
 | 框架 | Astro `^7`(SSR / Node standalone 适配器) |
 | 交互 | React `^19` 岛屿(Islands) |
-| 认证 | better-auth `^1.6`(GitHub OAuth + 用户名插件) |
+| 认证 | better-auth `^1.6`(GitHub OAuth + 用户名插件 + admin 插件) |
+| 内容 | Markdown + Astro 内容集合(Content Layer) |
 | 数据 | PostgreSQL + drizzle-orm `^0.45` / drizzle-kit |
 | 语言 | TypeScript(strict) |
 | 包管理 | pnpm 10 |
@@ -25,7 +26,9 @@
 - ✅ 首页渲染 —— 正文由 `src/content/index.md` 驱动
 - ✅ GitHub OAuth 登录 / 注销 —— 完整会话闭环
 - ✅ 全局中间件注入登录态(`Astro.locals.user`)
-- 🚧 多语言技术博客、数字花园 —— 规划中
+- ✅ 开发日志 —— `/blog` 列表(按年分组)与文章页,见 `src/content/blog/`
+- ✅ 后台用户管理 —— `/admin`,仅管理员可见(基于 better-auth `admin` 插件)
+- 🚧 数字花园 —— 规划中
 
 ---
 
@@ -69,13 +72,19 @@ pnpm dev          # http://localhost:4321
 src/
 ├── components/    # UI 单元:Astro 静态组件 + React 岛屿
 ├── content/       # Markdown 内容源(改文案优先改这里)
+│   ├── index.md   #   首页正文
+│   └── blog/      #   开发日志,文件名即 URL
+├── content.config.ts  # 内容集合定义与 frontmatter schema
 ├── db/schema/     # 数据库表结构
 ├── layouts/       # 全局布局壳
-├── lib/           # 服务端能力:认证、外部集成
-├── pages/         # 路由:页面与 API
+├── lib/           # 服务端能力:认证、内容读取、外部集成
+├── pages/         # 路由:页面与 API(/、/blog、/admin)
+├── styles/        # 全局 CSS:后台版式、长文正文排版
 ├── middleware.ts  # 每请求会话注入
 └── env.d.ts       # locals 类型增强
 ```
+
+**加一篇开发日志**:在 `src/content/blog/` 下新建 `YYYY-MM-DD-<短名>.md` 即可,无需改动任何 `.astro` 代码。frontmatter 字段与写作注意见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) 5.7 节。
 
 完整的模块职责、数据流与数据模型见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)。
 

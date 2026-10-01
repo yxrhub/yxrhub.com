@@ -7,7 +7,7 @@
 
 ## 1. 项目速览
 
-**yxrhub.com** —— 基于 Astro 全栈架构的个人品牌枢纽站,提供个人主页渲染与统一账号体系(GitHub OAuth)。
+**yxrhub.com** —— 基于 Astro 全栈架构的个人品牌枢纽站,提供个人主页渲染、开发日志与统一账号体系(GitHub OAuth)。
 
 | 维度  | 说明                                           |
 | --- | -------------------------------------------- |
@@ -16,6 +16,7 @@
 | 认证  | better-auth `^1.6` + Drizzle 适配器             |
 | 数据  | PostgreSQL + drizzle-orm `^0.45`             |
 | 语言  | TypeScript(strict)                           |
+| 内容  | Markdown + Astro 内容集合(`src/content.config.ts`) |
 | 包管理 | **pnpm**(禁止使用 npm / yarn)                    |
 | 部署  | Docker 多阶段构建,运行 `node dist/server/entry.mjs` |
 
@@ -50,12 +51,23 @@ pnpm drizzle-kit push     # 将 schema 变更同步到数据库(开发期,不产
 | `src/layouts/`      | 全局布局壳                          | 改 `<head>`、全局结构     |
 | `src/components/`   | UI 单元(`.astro` 静态 / `.tsx` 交互) | 新增、抽离组件             |
 | `src/content/`      | Markdown 内容源                   | **改文案优先改这里**        |
-| `src/lib/`          | 服务端能力(认证、外部集成)                 | 谨慎,影响面大             |
+| `src/content.config.ts` | 内容集合定义(blog)+ frontmatter schema | 新增集合、改字段            |
+| `src/lib/`          | 服务端能力(认证、内容读取、外部集成)            | 谨慎,影响面大             |
 | `src/db/schema/`    | 数据表结构                          | **必须走 drizzle-kit** |
+| `src/styles/`       | 全局 CSS(`admin.css` / `prose.css`) | 新增样式表               |
 | `src/middleware.ts` | 每请求会话注入                        | 谨慎                  |
 | `docs/`             | 设计与流程文档                        | 与代码同步更新             |
 
 **依赖方向**:`pages` → `layouts` / `components` → `lib` → `db`。**禁止反向依赖**,`lib` 与 `db` 不得 import 任何 UI 文件。
+
+### 内容投放:想改什么,改哪里
+
+| 目标 | 落点 | 不要做 |
+| --- | --- | --- |
+| 改首页自我介绍 / 项目 / 链接 | `src/content/index.md`(散文写正文,清单写 frontmatter) | 不要改 `Welcome.astro` 里的字面量 |
+| 加一篇开发日志 | `src/content/blog/YYYY-MM-DD-<短名>.md` | 不要改任何 `.astro` 代码 |
+| 调后台版式 | `src/styles/admin.css` | 不要在 `.tsx` 里写内联颜色 |
+| 调长文正文排版 | `src/styles/prose.css` | 不要各页面各写一份 |
 
 ---
 
@@ -74,6 +86,11 @@ pnpm drizzle-kit push     # 将 schema 变更同步到数据库(开发期,不产
 9. **需要登录态或权限的页面必须写 `export const prerender = false`。** 默认 `output: "static"`,页面默认预渲染;预渲染会跳过中间件所有依赖 headers 的逻辑,权限守卫会整体失效。
 10. **不要在 `.astro` 里用 `Astro.locals.user` 做预渲染页面的条件渲染。** 预渲染页面的 `locals.user` 恒为 `null`,分支永远不成立。登录态渲染一律交给 React 岛屿在客户端判断(首页的登录按钮与管理入口即如此)。
 11. **角色判定必须按分隔后精确匹配 `role`。** `role` 支持逗号分隔多值,`role.includes("admin")` 会把 `superadmin` 误判为管理员;统一用 `src/lib/authz.ts` 的 `isAdmin()`。
+12. **不要把 `src/content/index.md` 卷进内容集合。** 首页正文走的是原始 Markdown 模块导入(`import * as doc from "../content/index.md"`),不属于任何集合;`blog` 集合的 `glob.base` 精确指向 `src/content/blog`,不要扩大它。
+13. **不要把句末标点写在加粗内部末尾,又让加粗直接接汉字。** CommonMark 要求闭合定界符 right-flanking(左侧非空白,且「左侧非标点」或「右侧是空白/标点」)。唯一会踩的组合是 **`**结论。**下一句`** —— 闭合 `**` 左边是标点、右边是汉字,右侧不满足条件,**不会解析**,页面上原样显示星号。
+    改法:把标点移到加粗外面(`**结论**。下一句`)。**注意以下写法都是正常的,不要动**:`**加粗**汉字`、`前缀。**加粗**后缀`、`**加粗**，汉字`、`**加粗**（附注`。
+    复核手段:渲染后搜正文里是否残留 `**`(源文件层面的正则判据极易误报,不要用)。
+14. **日志页面保持预渲染,不得使用 `Astro.locals.user`。** 内容公开,静态化是正确选择;一旦有人给它加权限判断,回头参照红线 9/10。
 
 ---
 

@@ -1,0 +1,261 @@
+/**
+ * 长文正文排版 —— 首页正文（`content/index.md`）与开发日志正文共用这一份。
+ *
+ * 抽出来的原因：同一套排版如果各写一份，加一个元素（表格、代码块）就要改两处，
+ * 改一处忘一处必然腐化。这里只放「正文内容」的排版规则；
+ * 页面骨架（卡片、区块标题、页脚）仍留在各自的组件里。
+ *
+ * 由 `Layout.astro` 引入，全站生效。所有颜色必须引用设计令牌，
+ * 否则暗色模式会失效（见 AGENTS.md）。
+ */
+
+.prose {
+    font-size: 16.5px;
+    line-height: 1.9;
+    color: var(--text-2);
+}
+
+/* ── 标题 ─────────────────────────────────────── */
+
+.prose h1 {
+    font-size: clamp(28px, 5.2vw, 38px);
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.7em;
+}
+
+.prose h2 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin: 2em 0 0.7em;
+}
+
+.prose h3 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--text);
+    margin: 1.8em 0 0.6em;
+}
+
+.prose h4 {
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 1.6em 0 0.5em;
+}
+
+/* ── 段落与行内元素 ───────────────────────────── */
+
+.prose p {
+    margin: 0 0 1.15em;
+}
+
+.prose p:last-child {
+    margin-bottom: 0;
+}
+
+.prose strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.prose em {
+    font-style: italic;
+}
+
+.prose a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    transition: border-color 0.15s ease;
+}
+
+.prose a:hover {
+    border-bottom-color: var(--accent);
+}
+
+.prose code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1px 6px;
+}
+
+/* ── 列表 ─────────────────────────────────────── */
+
+.prose ul {
+    list-style: none;
+    margin: 0 0 1.5em;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.prose ul > li {
+    position: relative;
+    padding-left: 20px;
+    margin: 0;
+}
+
+.prose ul > li::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0.8em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.prose ol {
+    margin: 0 0 1.5em;
+    padding-left: 1.4em;
+    display: grid;
+    gap: 12px;
+}
+
+.prose ol > li {
+    margin: 0;
+    padding-left: 4px;
+}
+
+.prose ol > li::marker {
+    color: var(--text-3);
+    font-size: 0.92em;
+}
+
+.prose li > p {
+    margin: 0;
+}
+
+/* 嵌套列表不要再多出一份外边距 */
+.prose li > ul,
+.prose li > ol {
+    margin: 12px 0 0;
+}
+
+/* ── 引用 ─────────────────────────────────────── */
+
+.prose blockquote {
+    margin: 0 0 1.5em;
+    padding: 2px 0 2px 18px;
+    border-left: 2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+    color: var(--text-3);
+}
+
+.prose blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+/* ── 代码块 ───────────────────────────────────── */
+
+.prose pre {
+    margin: 0 0 1.6em;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.7;
+    tab-size: 2;
+}
+
+.prose pre code {
+    font-family: var(--font-mono);
+    font-size: inherit;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    white-space: pre;
+}
+
+/*
+ * Shiki 双主题。`astro.config.mjs` 里配了 themes + defaultColor: false，
+ * Shiki 因此不写死行内颜色，只把两套配色作为 CSS 变量挂上去，由这里按主题切换。
+ * 缺少这段，暗色模式下代码块会是浅色底。
+ */
+.prose .astro-code,
+.prose .astro-code span {
+    color: var(--shiki-light);
+    background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    .prose .astro-code,
+    .prose .astro-code span {
+        color: var(--shiki-dark);
+        background-color: var(--shiki-dark-bg);
+    }
+}
+
+/* ── 表格 ─────────────────────────────────────── */
+
+.prose table {
+    width: 100%;
+    margin: 0 0 1.6em;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.7;
+    display: block;
+    overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.prose th {
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ── 分隔线与图片 ─────────────────────────────── */
+
+.prose hr {
+    margin: 2.4em 0;
+    border: none;
+    border-top: 1px solid var(--border);
+}
+
+.prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+
+/* ── 窄屏 ─────────────────────────────────────── */
+
+@media (max-width: 640px) {
+    .prose {
+        font-size: 16px;
+        line-height: 1.85;
+    }
+
+    .prose pre {
+        padding: 14px 15px;
+        font-size: 13px;
+        border-radius: 10px;
+    }
+}
+
+@media print {
+    .prose {
+        color: #000;
+    }
+}

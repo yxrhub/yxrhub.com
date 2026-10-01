@@ -68,7 +68,10 @@ yxrhub.com/
 │   │   ├── GoogleTag.astro  # GA4 埋点（仅生产环境注入）
 │   │   └── LoginButton.tsx  # React 岛屿：登录/注销 + 管理员入口
 │   ├── content/
-│   │   └── index.md         # 首页正文（Markdown 单一数据源）
+│   │   ├── index.md         # 首页正文（Markdown 单一数据源，走原始模块导入）
+│   │   └── blog/            # 开发日志文章（内容集合，文件名即 slug）
+│   │       └── YYYY-MM-DD-<短名>.md
+│   ├── content.config.ts    # 内容集合定义（blog）+ frontmatter schema
 │   ├── db/
 │   │   └── schema/
 │   │       └── auth.ts      # 数据库表结构（user/session/account/verification）
@@ -77,13 +80,17 @@ yxrhub.com/
 │   ├── lib/
 │   │   ├── auth.ts          # better-auth 服务端实例（含 DB 连接）
 │   │   ├── auth-client.ts   # better-auth 浏览器端客户端
-│   │   └── authz.ts         # isAdmin()：中间件与岛屿共用的角色判定
+│   │   ├── authz.ts         # isAdmin()：中间件与岛屿共用的角色判定
+│   │   └── blog.ts          # 日志读取与排序（内容集合 → 页面用数据）
 │   ├── pages/
 │   │   ├── admin/index.astro     # 后台路由 /admin（SSR 外壳 + 岛屿挂载点）
 │   │   ├── api/auth/[...all].ts  # 认证 API 全量兜底路由
+│   │   ├── blog/index.astro      # 日志列表 /blog（按年分组）
+│   │   ├── blog/[slug].astro     # 日志正文 /blog/<日期>-<短名>（含上下篇）
 │   │   └── index.astro      # 首页路由 /
 │   ├── styles/
-│   │   └── admin.css        # 后台版式（全局 CSS，仅 /admin 页面引入）
+│   │   ├── admin.css        # 后台版式（仅 /admin 页面引入）
+│   │   └── prose.css        # 长文正文排版（Layout 全局引入，首页与日志共用）
 │   ├── env.d.ts             # App.Locals 类型增强
 │   └── middleware.ts        # 全局中间件：会话注入 + 后台守卫
 ├── public/                  # 不经构建、原样拷贝的资源
@@ -113,9 +120,10 @@ graph TB
 
     subgraph RUNTIME["应用层 · Astro SSR (Node standalone :4321)"]
         MW["middleware.ts<br/>会话注入 locals"]
-        PAGES["pages/<br/>index.astro"]
+        PAGES["pages/<br/>index.astro · blog/ · admin/"]
         API["pages/api/auth/[...all].ts"]
-        VIEW["layouts/ + components/<br/>+ content/index.md"]
+        VIEW["layouts/ + components/<br/>+ styles/prose.css"]
+        COLLECT["content.config.ts<br/>blog 内容集合"]
     end
 
     subgraph SERVICE["服务模块层"]
@@ -139,6 +147,7 @@ graph TB
     MW --> PAGES
     MW --> API
     PAGES --> VIEW
+    PAGES --> COLLECT
     VIEW --> C1
     API --> AS
     AS --> ORM
@@ -193,12 +202,14 @@ graph TB
   | frontmatter 字段 | 渲染为 |
   | --- | --- |
   | `projects.title` / `.intro` / `.items[]` | 项目卡片区（`#projects`），每项含 `name` `emoji` `url` `positioning` `status`，可选 `siteLabel` `siteText` `siteUrl` |
+  | `blog.title` / `.intro` / `.more` | 开发日志区块（`#devlog`），组件取最新 3 篇渲染 + 「查看全部」链接 |
   | `links.title` / `.intro` / `.items[]` | 平台链接网格（`#find-me`），每项含 `name` `text` `url`，可选 `note` |
   | `updated` | 页脚更新时间 |
 
   **修改这两处内容时改 frontmatter，不要改 `Welcome.astro`。** 新增字段需同步更新 `Welcome.astro` 顶部的 `DocFrontmatter` 接口。
 - **岛屿水合边界**：只有 `LoginButton.tsx` 是客户端组件，且使用 `client:idle`（浏览器空闲后再水合），保证首屏不被 JS 阻塞。Header 中的写法为 `<LoginButton client:idle />`。
-- **样式作用域**：`Welcome.astro` 通过 `set:html` 注入 Markdown 编译结果，因此针对正文元素的样式必须用 `:global()`（编译为 `.prose[data-astro-cid-*] ul` 形式）。**普通 scoped 选择器无法命中注入内容。**
+- **样式作用域**：首页通过 `set:html` 注入 Markdown 编译结果，因此针对正文元素的样式必须用 `:global()`（编译为 `.prose[data-astro-cid-*] ul` 形式）。**普通 scoped 选择器无法命中注入内容。**
+- **正文排版单一来源**：长文正文的 `.prose` 规则集中在 `src/styles/prose.css`，由 `Layout.astro` 全局引入，**首页与开发日志共用一份**。往正文里补元素（表格、引用、代码块）只改这一处。见 5.7。
 - **设计令牌集中点**：全站配色、字体栈、内容宽度、圆角与阴影统一在 `Layout.astro` 的 `<style is:global>` 中定义为 CSS 变量，并按 `prefers-color-scheme` 提供深色模式覆盖。**组件内不要硬编码颜色值，一律引用变量。**
 - **埋点仅生产环境**：`Layout.astro` 中通过 `import.meta.env.PROD && <GoogleTag/>` 条件渲染，避免开发环境污染统计数据。
 - **静态资源两类**：需要构建优化（哈希、压缩）放 `src/assets/` 并用 `import` 引用；需要原样对外（favicon、robots.txt）放 `public/`。
@@ -352,6 +363,67 @@ return next();
 
 **样式位置**：后台版式放全局 CSS `src/styles/admin.css`（React 岛屿内的 DOM 拿不到 `.astro` 的作用域样式），只在 `/admin` 页面 `import`。语义色 `--danger` / `--ok` / `--warn` 属于站点令牌，统一在 `Layout.astro` 里定义——因为模拟登录提示条挂在全局 Layout 上，后台样式表可能根本没加载。
 
+### 5.7 博客 / 开发日志模块
+
+**形态**：Markdown 落盘的内容集合 + 两个预渲染路由。没有后台写作入口，发文 = 往仓库里加一个 md 文件。
+
+| 路由 | 文件 | 渲染方式 |
+| --- | --- | --- |
+| `/blog` | `src/pages/blog/index.astro` | 预渲染。按年份分组，年与文章均倒序 |
+| `/blog/<YYYY-MM-DD>-<短名>` | `src/pages/blog/[slug].astro` | 预渲染。`getStaticPaths` 由集合生成，含上下篇导航 |
+
+**内容集合定义**（`src/content.config.ts`）：
+
+```ts
+const blog = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/blog" }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),   // 排序键
+    summary: z.string(),
+    minutes: z.number().int().positive().optional(),
+  }),
+});
+```
+
+> ⚠️ **`base` 指向 `src/content/blog`，刻意不覆盖 `src/content/index.md`。** 首页正文走的是原始 Markdown 模块导入（`import * as doc from "../content/index.md"`），**不属于任何集合**，两者互不干扰，不要试图把它并进集合里。
+
+**关键约定**：
+
+- **文件名即 slug**，格式 `YYYY-MM-DD-<短名>.md`；`glob` loader 给出的 `id` 是相对文件名去扩展名的结果（单层，因此用 `[slug]` 而非 `[...slug]`）。
+- **排序键是 frontmatter 的 `date`，不是文件名**——改文件名不影响顺序。同一日期多篇时按 `id` **倒序**兜底（见 `src/lib/blog.ts`），使同日几篇读起来也符合「新的在前」，顺序稳定不随机。
+- **正文里不写 `#` 一级标题**，h1 由 frontmatter 的 `title` 渲染，保证列表页、`<title>`、`meta description` 与正文页同源。
+- **上下篇语义**：`older` = 时间更早的一篇（「上一篇」），`newer` = 更晚的一篇（「下一篇」）。首篇无上一篇、末篇无下一篇。
+- **博客页保持预渲染**，因此**不得使用 `Astro.locals.user`**（见 AGENTS.md 红线 9/10）。内容本身是公开的，预渲染是正确选择。
+- **frontmatter 写错在构建期报错**，不会静默产出空白页——这正是引入 schema 的目的。
+
+**代码高亮**：`astro.config.mjs` 里为 Shiki 配了双主题：
+
+```js
+markdown: {
+  shikiConfig: {
+    themes: { light: 'github-light', dark: 'github-dark' },
+    defaultColor: false,   // 不写死行内颜色
+  },
+},
+```
+
+本站明暗切换走 `prefers-color-scheme`，**没有 class 开关**，因此不能用官方示例里的 `html.dark .astro-code` 选择器。`defaultColor: false` 让 Shiki 只输出 `--shiki-light` / `--shiki-dark` 变量，实际的切换写在 `src/styles/prose.css` 的媒体查询里。
+
+**中文加粗的渲染陷阱（写文章时必读）**：CommonMark 要求 `**` 的**闭合**定界符 right-flanking —— 左侧非空白，且「左侧非标点」或「右侧是空白/标点」。
+
+唯一会踩的组合是**句末标点被写进加粗内部、加粗又直接接汉字**：
+
+| 写法 | 结果 |
+| --- | --- |
+| `**结论。**下一句` | ❌ 闭合 `**` 左边是 `。`（标点）、右边是汉字 → 不解析，页面原样显示星号 |
+| `**结论**。下一句` | ✅ 把标点移到加粗外面 |
+| `**结论**，下一句` | ✅ 加粗后面是标点 |
+| `**加粗**汉字` | ✅ 加粗后直接接汉字**没问题** |
+| `前缀。**加粗**后缀` | ✅ 标点在**开启**符之前不受影响 |
+
+**只改上表第一行那一种，其余写法不要动。** 全站复核靠渲染后搜正文是否残留 `**`（源文件层面的正则判据极易误报）。
+
 ---
 
 ## 6. 核心数据流
@@ -476,6 +548,10 @@ graph LR
 | ADR-11 | 后台能力委托 `admin()` 插件，不自建 `/api/admin/*` | 会话校验、角色判定、CSRF 都由插件完成；自建等于重写最易出错的部分 | 权限漏洞 |
 | ADR-12 | 后台入口在客户端岛屿判定，不做服务端条件渲染 | 首页是预渲染页，中间件短路导致 `locals.user` 恒为 null，服务端条件永远不成立 | 管理员看不到入口 |
 | ADR-13 | 模拟登录提示条挂在全局 `Layout` | 模拟期间 `/(admin)` 对新身份是 404 且裸 HTML，只有全局页面才能退出模拟 | 进入模拟后无法自行退出 |
+| ADR-14 | 日志用 Astro **内容集合**（`glob` loader + zod schema），而非逐个 `import` Markdown | frontmatter 写错在**构建期**报错；新增文章无需改任何 `.astro` 代码；零运行时依赖 | schema 变更需同步 `content.config.ts` |
+| ADR-15 | 日志 URL 采用 `/blog/<YYYY-MM-DD>-<短名>`（日期前缀 + 可读短名） | 开发日志里日期是文章身份的一部分；扁平一层路由，可读、可手抄、利于 SEO | 改发布日期会改变 URL，需同步文件名 |
+| ADR-16 | 正文排版抽取到 `src/styles/prose.css`，由 `Layout` 全局引入，首页与日志共用 | 排版规则单一来源，新增元素（表格、代码块）一处生效 | 触及首页，改动需回归比对 |
+| ADR-17 | Shiki 配双主题 + `defaultColor: false`，切换写在 CSS 媒体查询里 | 本站明暗切换走 `prefers-color-scheme`，没有 class 开关，官方 `html.dark` 选择器不适用 | 缺少那段媒体查询时，暗色模式下代码块会是浅色底 |
 
 ---
 
@@ -483,12 +559,40 @@ graph LR
 
 ### 新增页面
 
-1. 在 `src/pages/` 新建 `.astro` 文件（文件名即路由，如 `blog.astro` → `/blog`）。
+1. 在 `src/pages/` 新建 `.astro` 文件（文件名即路由，如 `about.astro` → `/about`）。
 2. 用 `<Layout>` 包裹，复用 Header / Footer。
 3. 若需登录态：`Astro.locals.user`（中间件已注入）。
-4. 若该页无需登录态且内容静态，可加 `export const prerender = true` 走静态生成。
+4. 若该页无需登录态且内容静态，预渲染就是默认行为，不必额外声明。
 5. ⚠️ **反过来更重要**：需要登录态或权限的页面必须显式 `export const prerender = false`。默认 `output: "static"`，页面**默认就是预渲染的**，而预渲染会跳过中间件里全部依赖 headers 的逻辑——守卫形同虚设。
 6. 预渲染页面里读不到 `Astro.locals.user`，登录态相关的渲染只能交给岛屿。
+
+### 新增一篇开发日志
+
+**只做一件事：在 `src/content/blog/` 下新建 `YYYY-MM-DD-<短名>.md`。** 不需要改任何 `.astro` 代码，列表页、正文页与上下篇导航都会自动带上它。
+
+```markdown
+---
+title: "文章标题"        # 正文页 h1 由它渲染，md 正文里不要再写 #
+date: 2026-10-02         # 排序键，会被强制解析为 Date
+summary: "40–80 字的摘要" # 列表页与首页区块共用
+minutes: 8               # 可选，不写则按正文长度估算
+---
+
+正文……
+```
+
+- slug 即文件名（去掉 `.md`）：`2026-10-02-some-topic.md` → `/blog/2026-10-02-some-topic`
+- **标题里的 h1 不要重复写**，否则正文页会出现两个一级标题
+- **不要让句末标点留在加粗内部末尾又直接接汉字**（`**结论。**下一句` 不解析，见 5.7）
+- 若要让新文章出现在列表顶部，`date` 必须晚于现有文章
+- 写入前复核：不含密钥、真实连接串、内网地址、个人邮箱
+
+### 新增内容集合
+
+1. 在 `src/content.config.ts` 中 `defineCollection`，用 `glob({ pattern, base })` 指定目录。**`base` 要精确到子目录**，避免误收别的文件。
+2. `schema` 用 `astro/zod`（`import { z } from "astro/zod"`），让 frontmatter 错误在构建期暴露。
+3. 在 `src/lib/` 下写读取与排序函数，页面不直接散落排序逻辑。
+4. ⚠️ `src/content/index.md` 是首页正文，走原始 Markdown 模块导入，**不属于任何集合**，不要把它卷进来。
 
 ### 新增 API 接口
 
@@ -527,4 +631,4 @@ graph LR
 | 探活缺失 | 容器无 healthcheck | Dockerfile 增加 `HEALTHCHECK`，便于编排 |
 | 中文注释混排 | 部分源码中文注释 | 保持现状即可，但对外文档建议统一中文 |
 | README 过薄 | 曾仅一行标题 | 已补充快速开始与文档索引 |
-| 业务内容单页 | 仅首页 | 后续按「多语言博客 + 数字花园」演进，届时需引入内容集合（Content Collections） |
+| 日志无标签与检索 | 只有按年分组的列表 | 文章量上去后再考虑标签页 / RSS，当前规模不需要 |

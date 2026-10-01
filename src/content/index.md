@@ -22,6 +22,11 @@ projects:
       siteText: "云下人：无限世界 _ Coming Soon"
       siteUrl: "https://yxryxr.com"
 
+blog:
+  title: "📓 开发日志 (Dev Log)"
+  intro: "本站本身就是作品之一。这里记录它从零开始的过程——为什么这样选型、哪次重构推翻了什么，以及那些花了很久才找到的坑："
+  more: "查看全部日志"
+
 links:
   title: "🔗 数字世界的我 (Find Me)"
   intro: "你可以在以下平台找到我，我的英文用户名全网统一为 <strong>yxrhub</strong>："

@@ -4,6 +4,8 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import ImpersonationBanner from "../components/admin/ImpersonationBanner";
 import background from '../assets/background.svg';
+// 长文正文排版，首页与开发日志共用一份（见 src/styles/prose.css 顶部说明）
+import "../styles/prose.css";
 
 interface Props {
 	/** 覆盖默认标题，供后台等非内容页使用 */
@@ -12,11 +14,14 @@ interface Props {
 	noindex?: boolean;
 	/** 放宽内容宽度（默认 720px 是阅读向的栏宽，表格类界面不够用） */
 	wide?: boolean;
+	/** 覆盖默认 meta description，文章页传入摘要 */
+	description?: string;
 }
 
-const { title, noindex = false, wide = false } = Astro.props;
+const { title, noindex = false, wide = false, description } = Astro.props;
 
 const DEFAULT_TITLE = "YxrHub - 叶小睿 (Yxr) | 云下人叶小睿的数字空间 (Yxr Space)";
+const DEFAULT_DESCRIPTION = "欢迎来到 YxrHub，这里是叶小睿（云下人叶小睿）的个人品牌大本营与数字空间，连接着 Yxr Space 数字花园与《云下人：无限世界》游戏构想。";
 ---
 
 <!doctype html>
@@ -30,7 +35,7 @@ const DEFAULT_TITLE = "YxrHub - 叶小睿 (Yxr) | 云下人叶小睿的数字空
 		<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#0c0e18" media="(prefers-color-scheme: dark)" />
 		<meta name="keywords" content="叶小睿, 云下人叶小睿, Yxr, YeXiaoRui, yxrhub, Yxr Space, 云下人无限世界" />
-		<meta name="description" content="欢迎来到 YxrHub，这里是叶小睿（云下人叶小睿）的个人品牌大本营与数字空间，连接着 Yxr Space 数字花园与《云下人：无限世界》游戏构想。" />
+		<meta name="description" content={description ?? DEFAULT_DESCRIPTION} />
 		{noindex && <meta name="robots" content="noindex, nofollow" />}
 		<title>{title ?? DEFAULT_TITLE}</title>
 		{ import.meta.env.PROD && <GoogleTag/> }

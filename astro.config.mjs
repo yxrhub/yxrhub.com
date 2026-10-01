@@ -17,6 +17,16 @@ export default defineConfig({
     mode: 'standalone'
   }),
 
+  markdown: {
+    shikiConfig: {
+      // 双主题：本站的明暗切换走 `prefers-color-scheme`，没有 class 开关，
+      // 因此让 Shiki 只输出两套配色的 CSS 变量，切换逻辑写在 src/styles/prose.css。
+      themes: { light: 'github-light', dark: 'github-dark' },
+      // 不写死行内颜色，否则暗色模式下的代码块会是浅色底
+      defaultColor: false,
+    },
+  },
+
   vite: {
     server: {
       allowedHosts: ['localhost:4321', 'yxrhub.com'],

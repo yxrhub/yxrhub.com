@@ -1,0 +1,221 @@
+---
+import { render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import {
+    formatDate,
+    getPostsWithNeighbours,
+    isoDate,
+    readingMinutes,
+    type BlogPost,
+} from "../../lib/blog";
+
+/**
+ * 公开内容，保持预渲染：这里用 `getStaticPaths` 在构建期生成静态 HTML。
+ *
+ * ⚠️ 预渲染页会跳过中间件 `isPrerendered` 短路之后的逻辑，因此本页**不能**依赖
+ * `Astro.locals.user`（见 AGENTS.md 红线 9/10）。
+ */
+export async function getStaticPaths() {
+    const entries = await getPostsWithNeighbours();
+    return entries.map(({ post, newer, older }) => ({
+        params: { slug: post.id },
+        props: { post, newer, older },
+    }));
+}
+
+interface Props {
+    post: BlogPost;
+    /** 更新的一篇，没有则为 null */
+    newer: BlogPost | null;
+    /** 更早的一篇，没有则为 null */
+    older: BlogPost | null;
+}
+
+const { post, newer, older } = Astro.props as Props;
+const { Content } = await render(post);
+const minutes = readingMinutes(post);
+---
+
+<Layout title={`${post.data.title} — YxrHub`} description={post.data.summary}>
+    <article class="post">
+        <header class="post-head">
+            <a class="post-back" href="/blog">开发日志</a>
+            <h1 class="post-title">{post.data.title}</h1>
+            <p class="post-meta">
+                <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+                <span class="post-sep">·</span>
+                <span>约 {minutes} 分钟</span>
+            </p>
+            <p class="post-summary">{post.data.summary}</p>
+        </header>
+
+        <div class="prose">
+            <Content />
+        </div>
+    </article>
+
+    <nav class="post-nav" aria-label="日志导航">
+        {
+            older ? (
+                <a class="nav-item" href={`/blog/${older.id}`} rel="prev">
+                    <span class="nav-dir">← 上一篇</span>
+                    <span class="nav-title">{older.data.title}</span>
+                </a>
+            ) : (
+                <span class="nav-item is-empty" />
+            )
+        }
+        {
+            newer ? (
+                <a class="nav-item is-next" href={`/blog/${newer.id}`} rel="next">
+                    <span class="nav-dir">下一篇 →</span>
+                    <span class="nav-title">{newer.data.title}</span>
+                </a>
+            ) : (
+                <span class="nav-item is-empty" />
+            )
+        }
+    </nav>
+
+    <p class="post-foot">
+        <a href="/blog">← 返回日志列表</a>
+    </p>
+</Layout>
+
+<style>
+    .post-head {
+        margin-bottom: 40px;
+    }
+
+    .post-back {
+        display: inline-block;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: var(--accent);
+        text-decoration: none;
+        margin-bottom: 14px;
+    }
+
+    .post-back::before {
+        content: "←";
+        margin-right: 6px;
+        opacity: 0.7;
+    }
+
+    .post-back:hover {
+        opacity: 0.75;
+    }
+
+    .post-title {
+        font-size: clamp(26px, 4.6vw, 34px);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.35;
+        color: var(--text);
+        margin: 0 0 12px;
+    }
+
+    .post-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-3);
+        margin: 0 0 18px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .post-sep {
+        opacity: 0.6;
+    }
+
+    .post-summary {
+        font-size: 15px;
+        line-height: 1.9;
+        color: var(--text-2);
+        margin: 0;
+        padding: 13px 16px;
+        border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+        background: color-mix(in srgb, var(--accent) 5%, transparent);
+        border-radius: 0 10px 10px 0;
+    }
+
+    /* ── 上下篇 ───────────────────────────────── */
+
+    .post-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 56px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 13px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        text-decoration: none;
+        transition: border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .nav-item:not(.is-empty):hover {
+        border-color: var(--border-strong);
+        background: var(--surface-2);
+    }
+
+    .nav-item.is-next {
+        text-align: right;
+    }
+
+    .nav-item.is-empty {
+        border-color: transparent;
+        background: none;
+    }
+
+    .nav-dir {
+        font-size: 12px;
+        color: var(--text-3);
+    }
+
+    .nav-title {
+        font-size: 14.5px;
+        font-weight: 500;
+        line-height: 1.6;
+        color: var(--text);
+    }
+
+    .post-foot {
+        margin: 30px 0 0;
+        font-size: 13.5px;
+    }
+
+    .post-foot a {
+        color: var(--text-3);
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+
+    .post-foot a:hover {
+        color: var(--accent);
+    }
+
+    @media (max-width: 640px) {
+        .post-head {
+            margin-bottom: 32px;
+        }
+
+        .post-nav {
+            grid-template-columns: minmax(0, 1fr);
+            margin-top: 44px;
+        }
+
+        .nav-item.is-next {
+            text-align: left;
+        }
+    }
+</style>
